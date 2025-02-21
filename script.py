@@ -4,10 +4,22 @@ import re
 from pdfminer.high_level import extract_text
 
 
-
-
 def extract_text_from_pdf(pdf_path):
     return extract_text(pdf_path)
+
+def extract_name_from_resume(text, nlp):
+
+    # The name is likely the first line of the resume
+    first_line = text.split('\n')[0].strip()
+    first_line_doc = nlp(first_line)
+
+    # Check if the first line contains a PERSON entity
+    for ent in first_line_doc.ents:
+        if ent.label_ == "PERSON":
+            return ent.text
+
+    # If no PERSON entity is found, return the first line as the name
+    return first_line
 
 def extract_contact_number_from_resume(text):
     contact_number = None
@@ -39,31 +51,52 @@ def extract_linkedIn_profile_from_resume(text):
     
     return linkedIn_profile
 
-def extract_summary_from_resume(text):
-    summary = None
-
-    nlp = spacy.load("en_core_web_sm")
-    doc = nlp(text)
+def extract_university_from_resume(text):
+    university = None
+    nlp_blank = spacy.blank("en")
+    entity_ruler = nlp_blank.add_pipe("entity_ruler")
+    patterns = [{"label": "ORG", "pattern": "NOVA School of Science and Technology"}]
+    entity_ruler.add_patterns(patterns)
+    doc = nlp_blank(text)
 
     for entity in doc.ents:
-        if entity.label_ == "PERSON":
-            summary = entity.text
+        if entity.label_ == "ORG":
+            university = entity.text
             break
     
-    return summary
+    return university
 
+def extract_languages_from_resume(text):
+    languages = []
+    nlp_blank = spacy.blank("en")
+    entity_ruler = nlp_blank.add_pipe("entity_ruler")
+    patterns = [{"label": "LANGUAGE", "pattern": "English"}, {"label": "LANGUAGE", "pattern": "Portuguese"}]
+    entity_ruler.add_patterns(patterns)
+    doc = nlp_blank(text)
 
+    for entity in doc.ents:
+        if entity.label_ == "LANGUAGE":
+            languages.append(entity.text)
+    
+    return languages
 
 
 if __name__ == '__main__':
     resume_paths = [r"C:\Users\alvar\OneDrive\Ambiente de Trabalho\My Information\Projects\NER_Resume\Resume.pdf"]
+    
+    nlp = spacy.load("en_core_web_sm")
+    nlp_blank = spacy.blank("en")
 
     for resume_path in resume_paths:
         text = extract_text_from_pdf(resume_path)
 
         print("Resume:", resume_path)
 
-        #print(text)
+        name = extract_name_from_resume(text, nlp)
+        if name:
+            print("Name:", name)
+        else:
+            print("Name not found")
 
         contact_number = extract_contact_number_from_resume(text)
         if contact_number:
@@ -83,4 +116,20 @@ if __name__ == '__main__':
         else:
             print("LinkedIn Profile not found")
 
+        university = extract_university_from_resume(text)
+        if university:
+            print("University:", university)
+        else:
+            print("University not found")
+
+        languages = extract_languages_from_resume(text)
+        if languages:
+            print("Languages:", languages)
+        else:
+            print("Languages not found")
         
+        
+
+
+
+
